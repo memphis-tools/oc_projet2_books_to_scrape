@@ -1,5 +1,6 @@
 import csv
 import requests
+import time
 from bs4 import BeautifulSoup
 
 def write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list):
@@ -10,7 +11,7 @@ def write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list):
         for book_dict in books_dicts_list:
             writer.writerow(book_dict)
 
-def get_book_information(category_name, book_items_dict, root_url, book_url):
+def get_book_information(root_url, category_name, book_items_dict, book_url):
     """
     Paramètres:
     category_name: une String (exemple: 'Travel')
@@ -42,3 +43,29 @@ def get_book_information(category_name, book_items_dict, root_url, book_url):
             product_information_dict[f"{book_items_dict[str(info.th.text)]}"] = info.td.text
 
     return product_information_dict
+
+def get_category_books(root_url, category_name, category_uri, soup, category_books_uri_list = []):
+    """
+    Paramètres:
+    root_url: la partie racine de l'URL, partagée pour les requêtes
+    category_name: une String (exemple: 'Travel')
+    category_uri: URL relative (exemple: catalogue/category/books/travel_2/index.html')
+    soup: contenu de la page index d'une catégorie (la 1ère de chaque catégorie)
+    category_books_uri_list: par défaut vide lors du 1er appel. Mais est précisée lors du parcours récursif.
+    """
+
+    for e in soup.find("ol").findAll("div", {"class": "image_container"}):
+        formated_uri = str(e.a["href"]).replace("../../..", "catalogue")
+        category_books_uri_list.append(formated_uri)
+
+    next_button = soup.find("li", {"class", "next"})
+    if next_button is not None:
+        pager = next_button.a["href"]
+        formated_uri = f"{category_uri[:category_uri.rindex('/')]}/{pager}"
+        response = requests.get(f"{root_url}/{formated_uri}")
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "lxml")
+            time.sleep(1)
+        category_books_uri_list = get_category_books(root_url, category_name, category_uri, soup)
+
+    return category_books_uri_list
