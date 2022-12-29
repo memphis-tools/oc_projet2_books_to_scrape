@@ -1,7 +1,4 @@
 import os
-import requests
-import time
-from bs4 import BeautifulSoup
 from package import projet2
 
 #déclarations modifiables
@@ -12,6 +9,8 @@ root_url = "https://books.toscrape.com"
 product_information_dict = {}
 books_dicts_list = []
 category_books_uri_list = []
+categories_uri_dict = {}
+category_books_list = []
 
 #Définition d'un dictionnaire pour les libellés, en-tetes des fichiers .csv
 #Les informations à récupérer se présentent comme :
@@ -35,17 +34,10 @@ book_items_dict = {
 
 if csv_files_dir not in os.listdir():
     os.mkdir(csv_files_dir)
+categories_uri_dict = projet2.get_categories_uri_dict(root_url, categories_uri_dict)
+total_books = projet2.get_categories_books(csv_files_dir, root_url, book_items_dict, categories_uri_dict)
 
-#phase 2
-#category_name et category_uri par défaut pour test de la phase 2
-category_name = "Mystery"
-category_uri = "catalogue/category/books/mystery_3/index.html"
-print("[DEBUG PHASE 2] Exemple avec la catégorie 'Mystery'")
-response = requests.get(f"{root_url}/{category_uri}")
-if response.status_code == 200:
-    soup = BeautifulSoup(response.text, "lxml")
-    category_books_uri_list = projet2.get_category_books(root_url, category_name, category_uri, soup)
-    for book_uri in category_books_uri_list:
-        books_dicts_list.append(projet2.get_book_information(root_url, category_name, book_items_dict, f"{root_url}/{book_uri}"))
-    category_name = category_name.replace(" ", "_").lower()
-    projet2.write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list)
+#phase 3
+print(f"[DEBUG PHASE 3] Retrouver dans dossier '{csv_files_dir}' 1 fichier .csv par 'category'.")
+print(f"[DEBUG PHASE 3] total categories: {len(categories_uri_dict)}")
+print(f"[DEBUG PHASE 3] total books's categories: {total_books}")

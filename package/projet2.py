@@ -4,6 +4,13 @@ import time
 from bs4 import BeautifulSoup
 
 def write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list):
+    """
+    Paramètres:
+    csv_files_dir: variable alias qui pointe le répertoire des fichiers .csv
+    category_name: une String (exemple: 'Travel')
+    book_items_dict: le dictionnaire des libellés et en-têtes .csv
+    books_dicts_list: liste avec tous les livres sous forme de dictionnaire
+    """
     fieldnames = book_items_dict.values()
     with open(f"{csv_files_dir}/{category_name}.csv", "w", newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames = fieldnames)
@@ -29,7 +36,7 @@ def get_book_information(root_url, category_name, book_items_dict, book_url):
         product_information_dict["title"] = title
         product_information_dict["product_page_url"] = book_url
         product_gallery = soup.find("div", {"id": "product_gallery"})
-        image_url = str(product_gallery.img["src"]).replace("../../", f"{root_url}")
+        image_url = str(product_gallery.img["src"]).replace("../..", f"{root_url}")
         product_information_dict["image_url"] = image_url
 
         try:
@@ -69,3 +76,41 @@ def get_category_books(root_url, category_name, category_uri, soup, category_boo
         category_books_uri_list = get_category_books(root_url, category_name, category_uri, soup)
 
     return category_books_uri_list
+
+def get_categories_uri_dict(root_url, categories_uri_dict):
+    """
+    Paramètres:
+    root_url: la partie racine de l'URL, partagée pour les requêtes
+    categories_uri_dict: liste des URL relatives de chaque catégorie
+    """
+    response = requests.get(f"{root_url}/index.html")
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "lxml")
+        categories_ul = soup.find("ul", {"class": "nav-list"}).find("ul").findAll("li")
+        categories_uri_dict = {category.a.text.strip():category.a['href'] for category in categories_ul}
+        time.sleep(1)
+    return categories_uri_dict
+
+def get_categories_books(csv_files_dir, root_url, book_items_dict, categories_uri_dict):
+    """
+    Paramètres:
+    csv_files_dir: variable alias qui pointe le répertoire des fichiers .csv
+    root_url: la partie racine de l'URL, partagée pour les requêtes
+    book_items_dict: le dictionnaire des libellés et en-têtes .csv
+    categories_uri_dict: liste des URL relatives de chaque catégorie
+    """
+    total_books = 0
+    for category_name, category_uri in categories_uri_dict.items():
+        books_dicts_list = []
+        response = requests.get(f"{root_url}/{category_uri}")
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "lxml")
+            category_books_uri_list = get_category_books(root_url, category_name, category_uri, soup)
+            for book_uri in category_books_uri_list:
+                books_dicts_list.append(get_book_information(root_url, category_name, book_items_dict, f"{root_url}/{book_uri}"))
+                total_books += 1
+            category_name = category_name.replace(" ", "_").lower()
+            write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list)
+            category_books_uri_list.clear()
+            time.sleep(1)
+    return total_books
