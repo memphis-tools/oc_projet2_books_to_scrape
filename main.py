@@ -3,6 +3,7 @@ from package import projet2
 
 #déclarations modifiables
 csv_files_dir = "csv_files"
+img_files_dir = "img_files"
 root_url = "https://books.toscrape.com"
 
 #déclarations à ne pas modifier
@@ -34,10 +35,11 @@ book_items_dict = {
 
 if csv_files_dir not in os.listdir():
     os.mkdir(csv_files_dir)
+if img_files_dir not in os.listdir():
+    os.mkdir(img_files_dir)
 categories_uri_dict = projet2.get_categories_uri_dict(root_url, categories_uri_dict)
-total_books = projet2.get_categories_books(csv_files_dir, root_url, book_items_dict, categories_uri_dict)
+total_books = projet2.get_categories_books(csv_files_dir, img_files_dir, root_url, book_items_dict, categories_uri_dict)
 
-#phase 3
-print(f"[DEBUG PHASE 3] Retrouver dans dossier '{csv_files_dir}' 1 fichier .csv par 'category'.")
-print(f"[DEBUG PHASE 3] total categories: {len(categories_uri_dict)}")
-print(f"[DEBUG PHASE 3] total books's categories: {total_books}")
+#phase 4
+print(f"[DEBUG PHASE 4] Retrouver dans dossier '{img_files_dir}' 1 dossier images par categorie.")
+print(f"[DEBUG PHASE 4] Retrouver le dossier de chaque catégorie 1 fichier image par 'livre'.")

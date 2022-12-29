@@ -1,6 +1,7 @@
 import csv
 import requests
 import time
+import os
 from bs4 import BeautifulSoup
 
 def write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list):
@@ -18,7 +19,22 @@ def write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list):
         for book_dict in books_dicts_list:
             writer.writerow(book_dict)
 
-def get_book_information(root_url, category_name, book_items_dict, book_url):
+def download_image(img_files_dir, category_name, img_url):
+    """
+    Paramètres:
+    img_files_dir: variable alias qui pointe le répertoire des fichiers image
+    category_name: une String (exemple: 'Travel')
+    img_url: URL absolue de l'image
+    """
+    file_name = f"{img_url[img_url.rindex('/'):]}"
+    if category_name not in os.listdir(img_files_dir):
+        os.mkdir(f"{img_files_dir}/{category_name}")
+    response = requests.get(img_url)
+    if response.status_code == 200:
+        with open(f"{img_files_dir}/{category_name}{file_name}", 'wb') as img_file:
+            img_file.write(response.content)
+
+def get_book_information(root_url, category_name, book_items_dict, book_url, img_files_dir):
     """
     Paramètres:
     category_name: une String (exemple: 'Travel')
@@ -49,6 +65,8 @@ def get_book_information(root_url, category_name, book_items_dict, book_url):
         for info in product_information_table.findAll("tr"):
             product_information_dict[f"{book_items_dict[str(info.th.text)]}"] = info.td.text
 
+        download_image(img_files_dir, category_name, image_url)
+        time.sleep(1)
     return product_information_dict
 
 def get_category_books(root_url, category_name, category_uri, soup, category_books_uri_list = []):
@@ -88,13 +106,14 @@ def get_categories_uri_dict(root_url, categories_uri_dict):
         soup = BeautifulSoup(response.text, "lxml")
         categories_ul = soup.find("ul", {"class": "nav-list"}).find("ul").findAll("li")
         categories_uri_dict = {category.a.text.strip():category.a['href'] for category in categories_ul}
-        time.sleep(1)
+
     return categories_uri_dict
 
-def get_categories_books(csv_files_dir, root_url, book_items_dict, categories_uri_dict):
+def get_categories_books(csv_files_dir, img_files_dir, root_url, book_items_dict, categories_uri_dict):
     """
     Paramètres:
     csv_files_dir: variable alias qui pointe le répertoire des fichiers .csv
+    img_files_dir: variable alias qui pointe le répertoire des fichiers image
     root_url: la partie racine de l'URL, partagée pour les requêtes
     book_items_dict: le dictionnaire des libellés et en-têtes .csv
     categories_uri_dict: liste des URL relatives de chaque catégorie
@@ -107,10 +126,15 @@ def get_categories_books(csv_files_dir, root_url, book_items_dict, categories_ur
             soup = BeautifulSoup(response.text, "lxml")
             category_books_uri_list = get_category_books(root_url, category_name, category_uri, soup)
             for book_uri in category_books_uri_list:
-                books_dicts_list.append(get_book_information(root_url, category_name, book_items_dict, f"{root_url}/{book_uri}"))
+                books_dicts_list.append(get_book_information(
+                    root_url,
+                    category_name,book_items_dict,
+                    f"{root_url}/{book_uri}",
+                    img_files_dir
+                ))
                 total_books += 1
-            category_name = category_name.replace(" ", "_").lower()
+
             write_csv(csv_files_dir, category_name, book_items_dict, books_dicts_list)
             category_books_uri_list.clear()
-            time.sleep(1)
+
     return total_books
