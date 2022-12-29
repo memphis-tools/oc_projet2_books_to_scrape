@@ -21,6 +21,7 @@ category_books_list = []
 book_items_dict = {
     "category": "category",
     "title": "title",
+    "star-rating": "star_rating",
     "product_page_url": "product_page_url",
     "image_url": "image_url",
     "UPC": "universal_product_code",
@@ -39,7 +40,3 @@ if img_files_dir not in os.listdir():
     os.mkdir(img_files_dir)
 categories_uri_dict = projet2.get_categories_uri_dict(root_url, categories_uri_dict)
 total_books = projet2.get_categories_books(csv_files_dir, img_files_dir, root_url, book_items_dict, categories_uri_dict)
-
-#phase 4
-print(f"[DEBUG PHASE 4] Retrouver dans dossier '{img_files_dir}' 1 dossier images par categorie.")
-print(f"[DEBUG PHASE 4] Retrouver le dossier de chaque catégorie 1 fichier image par 'livre'.")

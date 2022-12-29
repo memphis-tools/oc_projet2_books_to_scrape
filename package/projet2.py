@@ -50,6 +50,8 @@ def get_book_information(root_url, category_name, book_items_dict, book_url, img
         product_information_dict["category"] = category_name
         title = soup.find("li", {"class": "active"}).text
         product_information_dict["title"] = title
+        star_rating = soup.find("div", {"class", "product_main"}).findAll("p")[2]
+        product_information_dict["star_rating"] = star_rating['class'][1]
         product_information_dict["product_page_url"] = book_url
         product_gallery = soup.find("div", {"id": "product_gallery"})
         image_url = str(product_gallery.img["src"]).replace("../..", f"{root_url}")
@@ -118,6 +120,7 @@ def get_categories_books(csv_files_dir, img_files_dir, root_url, book_items_dict
     book_items_dict: le dictionnaire des libellés et en-têtes .csv
     categories_uri_dict: liste des URL relatives de chaque catégorie
     """
+
     total_books = 0
     for category_name, category_uri in categories_uri_dict.items():
         books_dicts_list = []
