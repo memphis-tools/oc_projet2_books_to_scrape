@@ -24,7 +24,7 @@ def write_csv(category_name, books_dicts_list):
         for book_dict in books_dicts_list:
             writer.writerow(book_dict)
 
-def download_image(category_name, img_url):
+def download_image(category_name, img_url, session):
     """
     Paramètres:
     category_name: une String (exemple: 'Travel')
@@ -33,19 +33,19 @@ def download_image(category_name, img_url):
     file_name = f"{img_url[img_url.rindex('/'):]}"
     if category_name not in os.listdir(vars.img_files_dir):
         os.mkdir(f"{vars.img_files_dir}/{category_name}")
-    response = requests.get(img_url)
+    response = session.get(img_url)
     if response.status_code == 200:
         with open(f"{vars.img_files_dir}/{category_name}{file_name}", 'wb') as img_file:
             img_file.write(response.content)
 
-def get_book_information(category_name, book_url):
+def get_book_information(category_name, book_url, session):
     """
     Paramètres:
     category_name: une String (exemple: 'Travel')
     book_url: URL complète d'un livre (exemple: 'https://...island-2_277/index.html')
     """
     product_information_dict = {}
-    response = requests.get(book_url)
+    response = session.get(book_url)
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
         product_information_dict["category"] = category_name
@@ -68,7 +68,8 @@ def get_book_information(category_name, book_url):
         for info in product_information_table.findAll("tr"):
             product_information_dict[f"{vars.book_items_dict[str(info.th.text)]}"] = info.td.text
 
-        download_image(category_name, image_url)
+        with requests.Session() as session:
+            download_image(category_name, image_url, session)
         time.sleep(1)
     return product_information_dict
 
@@ -97,8 +98,8 @@ def get_category_books(category_name, category_uri, soup, category_books_uri_lis
 
     return category_books_uri_list
 
-def get_categories_uri_dict():
-    response = requests.get(f"{vars.root_url}/index.html")
+def get_categories_uri_dict(session):
+    response = session.get(f"{vars.root_url}/index.html")
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "lxml")
         categories_ul = soup.find("ul", {"class": "nav-list"}).find("ul").findAll("li")
@@ -107,7 +108,9 @@ def get_categories_uri_dict():
     return categories_uri_dict
 
 def get_categories_books():
-    categories_uri_dict = get_categories_uri_dict()
+    with requests.Session() as session:
+        categories_uri_dict = get_categories_uri_dict(session)
+
     category_books_uri_list = []
     total_books = 0
     for category_name, category_uri in categories_uri_dict.items():
@@ -116,12 +119,14 @@ def get_categories_books():
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "lxml")
             category_books_uri_list = get_category_books(category_name, category_uri, soup)
-            for book_uri in category_books_uri_list:
-                books_dicts_list.append(get_book_information(
-                    category_name,
-                    f"{vars.root_url}/{book_uri}",
-                ))
-                total_books += 1
+            with requests.Session() as session:
+                for book_uri in category_books_uri_list:
+                    books_dicts_list.append(get_book_information(
+                        category_name,
+                        f"{vars.root_url}/{book_uri}",
+                        session
+                    ))
+                    total_books += 1
 
             write_csv(category_name, books_dicts_list)
             category_books_uri_list.clear()
