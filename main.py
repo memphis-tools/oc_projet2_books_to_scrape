@@ -1,4 +1,3 @@
-import os
 
 from package import projet2
 from vars import vars
